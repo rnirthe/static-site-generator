@@ -6,6 +6,8 @@ from blocks import markdown_to_html_node
 basepath = sys.argv[1]
 if not basepath:
     basepath = "/"
+else:
+    basepath += "/"
 
 
 def main():
