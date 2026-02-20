@@ -2,7 +2,24 @@ from enum import Enum
 from htmlnode import ParentNode, LeafNode
 from textnode import TextType, TextNode
 from inline import text_to_textnodes
-from main import text_node_to_html_node
+
+
+def text_node_to_html_node(text_node):
+    match text_node.text_type:
+        case TextType.TEXT:
+            return LeafNode(None, text_node.text)
+        case TextType.BOLD:
+            return LeafNode("b", text_node.text)
+        case TextType.ITALIC:
+            return LeafNode("i", text_node.text)
+        case TextType.CODE:
+            return LeafNode("code", text_node.text)
+        case TextType.LINK:
+            return LeafNode("a", text_node.text, {"href": text_node.url})
+        case TextType.IMAGE:
+            return LeafNode("img", "", {"src": text_node.url, "alt": text_node.text})
+        case _:
+            raise Exception("Text node must be a text type")
 
 
 def markdown_to_blocks(markdown):
@@ -73,28 +90,41 @@ def block_to_html_node(b):
             block = text_to_textnodes(block)
             parts = []
             for part in block:
-                part = text_node_to_html_node(part)
-                parts.append(part)
+                if len(part.text) >= 2:
+                    while part.text[0] == " ":
+                        part.text = part.text[1:]
+                    part = text_node_to_html_node(part)
+                    parts.append(part)
             return ParentNode(tag="p", children=parts)
         case BlockType.HEADING:
-            level = 1
+            level = 0
             for char in block:
                 if char != "#":
                     continue
                 level += 1
+                block = block[1:]
+            while block[0] == " ":
+                block = block[1:]
             block = text_to_textnodes(block)
             parts = []
             for part in block:
-                part = text_node_to_html_node(part)
-                parts.append(part)
+                if len(part.text) >= 2:
+                    while part.text[0] == " ":
+                        part.text = part.text[1:]
+                    part = text_node_to_html_node(part)
+                    parts.append(part)
             return ParentNode(tag=f"h{level}", children=parts)
         case BlockType.QUOTE:
+            block = block[1:]
             block = text_to_textnodes(block)
             parts = []
             for part in block:
-                part = text_node_to_html_node(part)
-                parts.append(part)
-            return ParentNode(tag="q", children=parts)
+                if len(part.text) >= 2:
+                    while part.text[0] == " ":
+                        part.text = part.text[1:]
+                    part = text_node_to_html_node(part)
+                    parts.append(part)
+            return ParentNode(tag="blockquote", children=parts)
         case BlockType.CODE:
             block = block.lstrip("`\n")
             block = block.rstrip("`")
@@ -103,26 +133,32 @@ def block_to_html_node(b):
             return ParentNode(tag="pre", children=[block])
         case BlockType.UNORDERED_LIST:
             cees = []
-            for line in block.split("\n-"):
-                line = line.strip()
+            for line in block.split("\n"):
+                line = line.lstrip("- ")
                 line = text_to_textnodes(line)
                 parts = []
                 for part in line:
-                    part = text_node_to_html_node(part)
-                    parts.append(part)
+                    if len(part.text) >= 2:
+                        while part.text[0] == " ":
+                            part.text = part.text[1:]
+                        part = text_node_to_html_node(part)
+                        parts.append(part)
                 line = ParentNode(tag="li", children=parts)
                 cees.append(line)
             return ParentNode(tag="ul", children=cees)
 
         case BlockType.ORDERED_LIST:
             cees = []
-            for line in block.split("\n-"):
-                line = line.strip()
+            for line in block.split("\n"):
+                line = line.lstrip("0123456789.")
                 line = text_to_textnodes(line)
                 parts = []
                 for part in line:
-                    part = text_node_to_html_node(part)
-                    parts.append(part)
+                    if len(part.text) >= 2:
+                        while part.text[0] == " ":
+                            part.text = part.text[1:]
+                        part = text_node_to_html_node(part)
+                        parts.append(part)
                 line = ParentNode(tag="li", children=parts)
                 cees.append(line)
             return ParentNode(tag="ol", children=cees)
