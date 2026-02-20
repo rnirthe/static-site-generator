@@ -1,21 +1,26 @@
 import os
 import shutil
+import sys
 from blocks import markdown_to_html_node
+
+basepath = sys.argv
+if not basepath:
+    basepath = "/"
 
 
 def main():
-    my_copy("static", "public")
-    generate_pages_recursive("content", "template.html", "public")
+    my_copy("static", "docs")
+    generate_pages_recursive(basepath, "content", "template.html", "docs")
 
 
-def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
+def generate_pages_recursive(basepath, dir_path_content, template_path, dest_dir_path):
     for file in os.listdir(dir_path_content):
         file_path = f"{dir_path_content}/{file}"
         dest_path = f"{dest_dir_path}/{file}"
         if os.path.isdir(file_path):
-            generate_pages_recursive(file_path, template_path, dest_path)
+            generate_pages_recursive(basepath, file_path, template_path, dest_path)
         elif len(file) > 3 and file[-3:] == ".md":
-            generate_page(file_path, template_path, f"{dest_path[:-3]}.html")
+            generate_page(basepath, file_path, template_path, f"{dest_path[:-3]}.html")
 
 
 def my_copy(src, dest):
@@ -38,7 +43,7 @@ def extract_title(markdown):
     raise Exception("No title found.")
 
 
-def generate_page(from_path, template_path, dest_path):
+def generate_page(basepath, from_path, template_path, dest_path):
     print(f"Generating page from {from_path} to {dest_path} using {template_path}.")
     content_md = open(from_path, "r").read()
     template = open(template_path, "r").read()
@@ -46,6 +51,8 @@ def generate_page(from_path, template_path, dest_path):
     title = extract_title(content_md)
     result = template.replace("{{ Title }}", title)
     result = result.replace("{{ Content }}", html)
+    result = result.replace('href="/', f'href="{basepath}')
+    result = result.replace('src="/', f'src="{basepath}')
 
     os.makedirs(os.path.dirname(dest_path), exist_ok=True)
     file = open(dest_path, "w")
